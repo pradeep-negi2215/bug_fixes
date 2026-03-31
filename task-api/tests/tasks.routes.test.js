@@ -61,6 +61,16 @@ describe('tasks routes', () => {
     expect(response.body).toHaveLength(0);
   });
 
+  test('GET /tasks?status=invalid returns empty list', async () => {
+    taskService.create({ title: 'Todo', status: 'todo' });
+    taskService.create({ title: 'Done', status: 'done' });
+
+    const response = await request(app).get('/tasks?status=invalid');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(0);
+  });
+
   test('GET /tasks?page=1&limit=2 returns first page', async () => {
     taskService.create({ title: 'A' });
     taskService.create({ title: 'B' });
@@ -89,6 +99,15 @@ describe('tasks routes', () => {
     expect(response.body.error).toBeTruthy();
   });
 
+  test('PUT /tasks/:id rejects invalid status', async () => {
+    const task = taskService.create({ title: 'Bad status' });
+
+    const response = await request(app).put(`/tasks/${task.id}`).send({ status: 'invalid' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBeTruthy();
+  });
+
   test('DELETE /tasks/:id deletes a task', async () => {
     const task = taskService.create({ title: 'Delete' });
 
@@ -100,6 +119,16 @@ describe('tasks routes', () => {
 
   test('DELETE /tasks/:id returns 404 for missing task', async () => {
     const response = await request(app).delete('/tasks/missing');
+
+    expect(response.status).toBe(404);
+    expect(response.body.error).toBeTruthy();
+  });
+
+  test('DELETE /tasks/:id returns 404 when deleting twice', async () => {
+    const task = taskService.create({ title: 'Delete twice' });
+
+    await request(app).delete(`/tasks/${task.id}`);
+    const response = await request(app).delete(`/tasks/${task.id}`);
 
     expect(response.status).toBe(404);
     expect(response.body.error).toBeTruthy();
@@ -123,6 +152,16 @@ describe('tasks routes', () => {
     expect(response.body.error).toBeTruthy();
   });
 
+  test('PATCH /tasks/:id/complete handles already done tasks', async () => {
+    const task = taskService.create({ title: 'Already done', status: 'done' });
+
+    const response = await request(app).patch(`/tasks/${task.id}/complete`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('done');
+    expect(response.body.completedAt).toBeTruthy();
+  });
+
   test('GET /tasks/stats returns counts and overdue', async () => {
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
@@ -138,6 +177,33 @@ describe('tasks routes', () => {
       in_progress: 1,
       done: 1,
       overdue: 1,
+    });
+  });
+
+  test('GET /tasks/stats returns zeros when empty', async () => {
+    const response = await request(app).get('/tasks/stats');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      todo: 0,
+      in_progress: 0,
+      done: 0,
+      overdue: 0,
+    });
+  });
+
+  test('GET /tasks/stats ignores unknown statuses', async () => {
+    taskService.create({ title: 'Todo', status: 'todo' });
+    taskService.create({ title: 'Blocked', status: 'blocked' });
+
+    const response = await request(app).get('/tasks/stats');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      todo: 1,
+      in_progress: 0,
+      done: 0,
+      overdue: 0,
     });
   });
 

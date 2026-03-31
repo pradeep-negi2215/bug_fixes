@@ -1,11 +1,12 @@
 # Work Log
 
 ## What I changed
-- Added unit tests for taskService and integration tests for the API routes (31 tests).
+- Added unit tests for taskService and integration tests for the API routes (37 tests).
 - Fixed pagination offset in getPaginated().
 - Fixed status filtering to require exact matches (no substring matches).
 - Preserved task priority when marking a task complete.
 - Added PATCH /tasks/:id/assign with validation and assignee support in the task model.
+- Added edge-case coverage to satisfy the assignment requirement.
 
 ## How to run tests
 ```bash
